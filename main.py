@@ -114,8 +114,11 @@ def cat():
     if request.method=="POST":
         item=request.form.get('item')
         # query=db.engine.execute(f"INSERT INTO `category`(`item_name`) VALUES ('{item}');")
-        with db.engine.connect() as conn:
-            query = conn.execute(text(f"INSERT INTO `category`(`item_name`) VALUES ('{item}');")).fetchall()
+        # with db.engine.connect() as conn:
+            # query = conn.execute(text(f"INSERT INTO `category`(`item_name`) VALUES ('{item}');"))
+        query=Category(item_name=item)
+        db.session.add(query)
+        db.session.commit()
         flash(item+" added","warning")
         return redirect(url_for('home'))
     return render_template('item.html')
@@ -130,16 +133,24 @@ def movement():
         trno=request.form.get('trno')
         if trno =="scrap":
             # query=db.engine.execute(f"DELETE FROM `item` WHERE `item_id`='{item}';")
-            with db.engine.connect() as conn:
-                query = conn.execute(text(f"DELETE FROM `item` WHERE `item_id`='{item}';")).fetchall()
+            # with db.engine.connect() as conn:
+                # query = conn.execute(text(f"DELETE FROM `item` WHERE `item_id`='{item}';"))
+            post=Item.query.filter_by(item_id=item).first()
+            db.session.delete(post)
+            db.session.commit()
             flash(item+" deleted","warning")
             return redirect(url_for('home'))
         # query=db.engine.execute(f"UPDATE `item` SET `rno`= '{trno}' WHERE `item_id`='{item}';")
-        with db.engine.connect() as conn:
-            query = conn.execute(text(f"UPDATE `item` SET `rno`= '{trno}' WHERE `item_id`='{item}';")).fetchall()
+        # with db.engine.connect() as conn:
+            # query = conn.execute(text(f"UPDATE `item` SET `rno`= '{trno}' WHERE `item_id`='{item}';"))
+        post=Item.query.filter_by(item_id=item).first()
+        post.rno=trno
         # query=db.engine.execute(f"INSERT INTO `movement`(`item_id`, `from_rno`, `to_rno`) VALUES('{item}','{frno}','{trno}')")
-        with db.engine.connect() as conn:
-            query = conn.execute(text(f"INSERT INTO `movement`(`item_id`, `from_rno`, `to_rno`) VALUES('{item}','{frno}','{trno}')")).fetchall()
+        # with db.engine.connect() as conn:
+            # query = conn.execute(text(f"INSERT INTO `movement`(`item_id`, `from_rno`, `to_rno`) VALUES('{item}','{frno}','{trno}')"))
+        query=Movement(item_id=item,from_rno=frno,to_rno=trno)
+        db.session.add(query)
+        db.session.commit()
         # cquery=db.engine.execute(f"SELECT * FROM `category`;")
         with db.engine.connect() as conn:
             cquery = conn.execute(text(f"SELECT * FROM `category`;")).fetchall()
@@ -279,11 +290,14 @@ def ise():
             itemid=item+x
 
             # quer=db.engine.execute(f"INSERT INTO `item`(`item_id`, `item_name`, `rno`, `vid`) VALUES('{itemid}','{itemm}','{rno}','{vid}');")
-            with db.engine.connect() as conn:
-                query = conn.execute(text(f"INSERT INTO `item`(`item_id`, `item_name`, `rno`, `vid`) VALUES('{itemid}','{itemm}','{rno}','{vid}');"))
-            # query=db.engine.execute(f"SELECT * FROM `category`;")
-            with db.engine.connect() as conn:
-                query = conn.execute(text(f"SELECT * FROM `category`;")).fetchall()
+            #with db.engine.connect() as conn:
+                #query = conn.execute(text(f"INSERT INTO `item`(`item_id`, `item_name`, `rno`, `vid`) VALUES('{itemid}','{itemm}','{rno}','{vid}');"))
+            query=Item(item_id=itemid,item_name=itemm,rno=rno,vid=vid)
+            db.session.add(query)
+            db.session.commit()
+            query=db.engine.execute(f"SELECT * FROM `category`;")
+            #with db.engine.connect() as conn:
+               # query = conn.execute(text(f"SELECT * FROM `category`;")).fetchall()
             flash(itemm+" added succesfully","warning")
             return render_template('item.html',query=query)
 
@@ -306,8 +320,11 @@ def signin():
         encpass=generate_password_hash(password)
 
         # newuser=db.engine.execute(f"INSERT INTO `user` (`name`,`email`,`password`) VALUES ('{name}','{email}','{encpass}')")
-        with db.engine.connect() as conn:
-            newuser = conn.execute(text(f"INSERT INTO `user` (`name`,`email`,`password`) VALUES ('{name}','{email}','{encpass}')")).fetchall()
+        # with db.engine.connect() as conn:
+            # newuser = conn.execute(text(f"INSERT INTO `user` (`name`,`email`,`password`) VALUES ('{name}','{email}','{encpass}')"))
+        newuser=User(name=name,email=email,password=encpass)
+        db.session.add(newuser)
+        db.session.commit()
         flash("Sign in Success Please Login","sucess")
         return render_template('login.html')
 
@@ -329,12 +346,12 @@ def login():
             # with db.engine.begin() as conn:
             #  result = conn.execute(text(sqlite3)) 
             #  conn.commit() 
-            print("engine",db.engine)
+            # print("engine",db.engine)
             # query=db.engine.execute(f"SELECT * FROM `category`;")
             with db.engine.connect() as conn:
                 query = conn.execute(text(f"SELECT * FROM `category`;")).fetchall()
                 # query=conn.execute(f"SELECT * FROM `category`;")
-            print("query",query)
+            # print("query",query)
             return render_template('item.html',query=query)
         else:
             flash("Invalid User Id or password","danger")
@@ -347,7 +364,7 @@ def login():
 def log():
     # query=db.engine.execute(f"SELECT * FROM `logs`;")
     with db.engine.connect() as conn:
-        query = conn.execute(text(f"SELECT * FROM `logs`;")).fetchall()
+        query = conn.execute(text(f"SELECT * FROM `logs` order by cdate desc;")).fetchall()
     return render_template('logs.html',query=query)
 
 @app.route('/van',methods=['POST','GET'])
@@ -360,8 +377,11 @@ def van():
         vid=request.form.get('vid')
         vname=request.form.get('vname')
         # query=db.engine.execute(f"INSERT INTO `vender`(`vid`, `name`, `billing`) VALUES ('{vid}','{vname}','NULL');")
-        with db.engine.connect() as conn:
-            query = conn.execute(text(f"INSERT INTO `vender`(`vid`, `name`, `billing`) VALUES ('{vid}','{vname}','NULL');")).fetchall()
+        # with db.engine.connect() as conn:
+            # query = conn.execute(text(f"INSERT INTO `vender`(`vid`, `name`, `billing`) VALUES ('{vid}','{vname}','NULL');"))
+        query=Vender(vid=vid,name=vname,billing='NULL')
+        db.session.add(query)
+        db.session.commit()    
         flash(" new vendor added","warning")
         # query1=db.engine.execute(f"SELECT * FROM `vender`;")
         with db.engine.connect() as conn:
